@@ -100,7 +100,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SEARCH & FILTER BAR */}
+      {/* SEARCH & FILTER BAR - Adjusted sticky top to match updated header */}
       <section className="sticky top-16 sm:top-20 z-30 bg-gray-50/95 backdrop-blur-xl py-6 -mx-4 px-4 border-b border-gray-100">
         <div className="max-w-7xl mx-auto flex flex-col gap-6">
             <div className="flex flex-col lg:flex-row gap-4 items-center">
