@@ -2,20 +2,7 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { Product, Review, ComparisonVerdict } from "../types";
 
-// Helper to safely get API Key in browser or bundled environment
-const getApiKey = () => {
-  try {
-    // Check various common injection points for environment variables
-    const key = (import.meta as any).env?.API_KEY || 
-                (import.meta as any).env?.VITE_API_KEY ||
-                (typeof process !== 'undefined' ? (process as any).env?.API_KEY : null) || 
-                (window as any)._env_?.API_KEY || 
-                "";
-    return key;
-  } catch (e) {
-    return "";
-  }
-};
+// Note: API_KEY is managed externally and accessed via process.env.API_KEY
 
 const addToCartTool: FunctionDeclaration = {
   name: 'addToCart',
@@ -33,16 +20,18 @@ const addToCartTool: FunctionDeclaration = {
 };
 
 export const geminiService = {
+  // Consultation logic for personalized shopping assistance
   async consult(
     history: { role: 'user' | 'assistant', content: string }[],
     products: Product[]
   ) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const productContext = JSON.stringify(products.map(p => ({ id: p.id, name: p.name, category: p.category, tags: p.tags, price: p.price })));
     
+    /* Using gemini-3-pro-preview for complex reasoning task */
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `
         You are an elite personal shopper at NovaMart. 
         Inventory: ${productContext}
@@ -68,9 +57,10 @@ export const geminiService = {
     }
   },
 
+  // Vision-based analysis of a room space
   async analyzeSpace(base64Image: string, productName: string) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imagePart = {
       inlineData: {
         mimeType: 'image/jpeg',
@@ -78,8 +68,9 @@ export const geminiService = {
       },
     };
     
+    /* Using gemini-3-pro-preview for detailed visual reasoning */
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: { 
         parts: [
           imagePart, 
@@ -91,14 +82,16 @@ export const geminiService = {
     return response.text;
   },
 
+  // General shopping advice with tool support
   async getShoppingAdvice(
     query: string, 
     context: { products: Product[], cart: any[], history: any[] }
   ) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    /* Using gemini-3-pro-preview for complex reasoning and tool usage */
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `User Query: ${query}\n\nAvailable Products Context: ${JSON.stringify(context.products.map(p => ({ id: p.id, name: p.name, price: p.price, stock: p.stock })))}\nUser Cart: ${JSON.stringify(context.cart)}\n\nAct as a helpful shopping assistant for NovaMart. Suggest specific products from our inventory. You can use the addToCart tool if a user explicitly asks to add a specific item.`,
       config: {
         tools: [{ functionDeclarations: [addToCartTool] }],
@@ -111,10 +104,12 @@ export const geminiService = {
     };
   },
 
+  // Summary generation for product reviews
   async summarizeReviews(productName: string, reviews: Review[]) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const reviewsText = reviews.map(r => `[Rating: ${r.rating}/5] ${r.comment}`).join('\n');
+    /* Using gemini-3-flash-preview for standard text summarization task */
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Product: ${productName}\nReviews:\n${reviewsText}\n\nSummarize these reviews into: 1. Overall Sentiment, 2. Key Pros, 3. Key Cons. Use bullet points. Keep it concise.`,
@@ -122,11 +117,13 @@ export const geminiService = {
     return response.text;
   },
 
+  // Side-by-side product comparison reasoning
   async compareProducts(productA: Product, productB: Product): Promise<ComparisonVerdict> {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    /* Using gemini-3-pro-preview for advanced analytical comparison */
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: `Compare these two products:\nProduct A: ${JSON.stringify(productA)}\nProduct B: ${JSON.stringify(productB)}\n\nProvide a side-by-side comparison in JSON format with summary, key points, and a final verdict on which is better for different user profiles.`,
       config: {
         responseMimeType: "application/json",
@@ -155,9 +152,11 @@ export const geminiService = {
     return JSON.parse(response.text || "{}");
   },
 
+  // Intelligent product bundle suggestions
   async suggestBundle(mainProduct: Product, allProducts: Product[]) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    /* Using gemini-3-flash-preview for creative product pairing */
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Main Product: ${mainProduct.name} (${mainProduct.category})\nCatalog: ${JSON.stringify(allProducts.map(p => ({ id: p.id, name: p.name, category: p.category })))}\n\nSuggest 2 products that would form a perfect "bundle" or "outfit" with the main product. Return a JSON array of product IDs.`,
@@ -177,9 +176,11 @@ export const geminiService = {
     }
   },
 
+  // Semantic search across the product catalog
   async searchProducts(query: string, products: Product[]) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    /* Using gemini-3-flash-preview for quick semantic mapping */
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Search Query: "${query}"\nProducts List: ${JSON.stringify(products.map(p => ({ id: p.id, name: p.name, tags: p.tags, desc: p.description })))}\n\nReturn ONLY a JSON array of product IDs that match the query.`,
@@ -200,9 +201,10 @@ export const geminiService = {
     }
   },
 
+  // Identifying products from uploaded images
   async searchByImage(base64Image: string, products: Product[]) {
-    const apiKey = getApiKey();
-    const ai = new GoogleGenAI({ apiKey });
+    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imagePart = {
       inlineData: {
         mimeType: 'image/jpeg',
@@ -210,6 +212,7 @@ export const geminiService = {
       },
     };
     
+    /* Using gemini-3-flash-preview for image recognition and catalog matching */
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: { 

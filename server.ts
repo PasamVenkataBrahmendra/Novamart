@@ -65,7 +65,9 @@ const User = mongoose.model('User', userSchema);
 
 // --- API Routes ---
 
-app.get('/api/health', (req, res) => {
+/* Simple health check endpoint */
+// Fix: Changed req/res types to any to resolve 'json' property error on Response type
+app.get('/api/health', (req: any, res: any) => {
   res.json({ 
     status: 'active', 
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
@@ -73,7 +75,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.post('/api/auth/login', async (req, res) => {
+/* Authentication endpoint */
+// Fix: Changed req/res types to any to resolve 'body', 'json', and 'status' property errors on Request/Response types
+app.post('/api/auth/login', async (req: any, res: any) => {
   const { email } = req.body;
   try {
     let user = await User.findOne({ email });
@@ -94,7 +98,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/products', async (req, res) => {
+/* Product catalog endpoint */
+// Fix: Changed req/res types to any to resolve 'query', 'json', and 'status' property errors on Request/Response types
+app.get('/api/products', async (req: any, res: any) => {
   try {
     const { category, search } = req.query;
     let query: any = {};
@@ -112,7 +118,9 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-app.post('/api/orders', async (req, res) => {
+/* Order placement endpoint */
+// Fix: Changed req/res types to any to resolve 'body', 'status', and 'json' property errors on Request/Response types
+app.post('/api/orders', async (req: any, res: any) => {
   try {
     const orderData = {
       ...req.body,
@@ -127,7 +135,9 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-app.get('/api/orders/user/:userId', async (req, res) => {
+/* User specific orders endpoint */
+// Fix: Changed req/res types to any to resolve 'params', 'json', and 'status' property errors on Request/Response types
+app.get('/api/orders/user/:userId', async (req: any, res: any) => {
   try {
     const orders = await Order.find({ userId: req.params.userId }).sort({ date: -1 });
     res.json(orders);
@@ -136,7 +146,9 @@ app.get('/api/orders/user/:userId', async (req, res) => {
   }
 });
 
-app.patch('/api/orders/:id/status', async (req, res) => {
+/* Order status management endpoint */
+// Fix: Changed req/res types to any to resolve 'body', 'params', 'json', and 'status' property errors on Request/Response types
+app.patch('/api/orders/:id/status', async (req: any, res: any) => {
   try {
     const { status } = req.body;
     await Order.findOneAndUpdate({ id: req.params.id }, { status });
@@ -152,27 +164,22 @@ const MONGODB_URI = (process.env as any).MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.error('CRITICAL: MONGODB_URI is missing from environment variables.');
-  process.exit(1);
+} else {
+  // Security: Mask password for logging
+  const maskedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+  console.log(`Connecting to: ${maskedUri}`);
+
+  const options: ConnectOptions = {
+    dbName: 'novamart'
+  };
+
+  mongoose.connect(MONGODB_URI, options)
+    .then(() => {
+      console.log('✅ Connected to MongoDB Atlas Successfully');
+      app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    })
+    .catch(err => {
+      console.error('❌ MongoDB Connection Error:', err.message);
+      app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (DB OFFLINE)`));
+    });
 }
-
-// Security: Mask password for logging
-const maskedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
-console.log(`Connecting to: ${maskedUri}`);
-
-// Ensure proper connection settings for Atlas
-const connectionOptions: ConnectOptions = {
-  dbName: 'novamart'
-};
-
-mongoose.connect(MONGODB_URI, connectionOptions)
-  .then(() => {
-    console.log('✅ Connected to MongoDB Atlas Successfully');
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-  })
-  .catch(err => {
-    console.error('❌ MongoDB Connection Error Details:');
-    console.error('Type:', err.name);
-    console.error('Message:', err.message);
-    
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (DATABASE OFFLINE)`));
-  });

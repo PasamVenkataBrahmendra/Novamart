@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/StoreContext';
 import { apiService } from '../services/api';
@@ -7,6 +7,7 @@ import AIChatbot from './AIChatbot';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { cart, user, logout, wishlist, locale, setLocale } = useStore();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -18,12 +19,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }[locale];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
       <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
-                NovaMart<span className="text-sm font-medium text-gray-400 align-top ml-1">AI</span>
+          <div className="flex items-center gap-4 lg:gap-6">
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="lg:hidden p-2 text-gray-600 hover:text-indigo-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}></path>
+              </svg>
+            </button>
+            <Link to="/" className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent whitespace-nowrap">
+                NovaMart<span className="text-xs font-medium text-gray-400 align-top ml-1">AI</span>
             </Link>
 
             <div className="hidden lg:flex items-center bg-gray-50 rounded-full p-1 border">
@@ -42,43 +51,45 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
           </div>
 
-          <nav className="flex items-center gap-4 lg:gap-8">
-            <Link 
-                to="/" 
-                className={`text-sm font-semibold transition-colors ${isActive('/') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
-            >
-                {t.shop}
-            </Link>
-
-            <Link 
-                to="/wishlist" 
-                className={`text-sm font-semibold transition-colors flex items-center gap-1 ${isActive('/wishlist') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
-            >
-                {t.wishlist}
-                {wishlist.length > 0 && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></span>}
-            </Link>
-
-            <Link 
-                to="/ai-shopping" 
-                className={`text-sm font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${isActive('/ai-shopping') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-indigo-600 hover:bg-indigo-50'}`}
-            >
-                <span className="text-base">✨</span> {t.ai}
-            </Link>
-            
-            {user && (
+          <nav className="flex items-center gap-2 lg:gap-8">
+            <div className="hidden lg:flex items-center gap-6">
                 <Link 
-                    to="/orders" 
-                    className={`text-sm font-semibold transition-colors ${isActive('/orders') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+                    to="/" 
+                    className={`text-sm font-semibold transition-colors ${isActive('/') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
                 >
-                    {t.orders}
+                    {t.shop}
                 </Link>
-            )}
 
-            {user?.role === 'admin' && (
-              <Link to="/admin" className="text-sm font-semibold text-gray-500 hover:text-indigo-600">{t.admin}</Link>
-            )}
+                <Link 
+                    to="/wishlist" 
+                    className={`text-sm font-semibold transition-colors flex items-center gap-1 ${isActive('/wishlist') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+                >
+                    {t.wishlist}
+                    {wishlist.length > 0 && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></span>}
+                </Link>
+
+                <Link 
+                    to="/ai-shopping" 
+                    className={`text-sm font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${isActive('/ai-shopping') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                >
+                    <span className="text-base">✨</span> {t.ai}
+                </Link>
+                
+                {user && (
+                    <Link 
+                        to="/orders" 
+                        className={`text-sm font-semibold transition-colors ${isActive('/orders') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+                    >
+                        {t.orders}
+                    </Link>
+                )}
+
+                {user?.role === 'admin' && (
+                  <Link to="/admin" className="text-sm font-semibold text-gray-500 hover:text-indigo-600">{t.admin}</Link>
+                )}
+            </div>
             
-            <div className="flex items-center gap-4 border-l pl-4">
+            <div className="flex items-center gap-2 lg:gap-4 border-l pl-2 lg:pl-4">
                 <Link to="/cart" className="relative group p-2">
                   <svg className="w-5 h-5 text-gray-600 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                   {cartCount > 0 && (
@@ -89,24 +100,58 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </Link>
 
                 {user ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 lg:gap-3">
                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
                         {user.name.charAt(0)}
                     </div>
                     <button 
                       onClick={logout}
-                      className="text-xs text-red-500 hover:underline font-bold uppercase tracking-wider"
+                      className="hidden sm:block text-xs text-red-500 hover:underline font-bold uppercase tracking-wider"
                     >
                       Logout
                     </button>
                   </div>
                 ) : (
-                  <Link to="/login" className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95">
+                  <Link to="/login" className="bg-indigo-600 text-white px-3 lg:px-5 py-2 rounded-xl text-xs lg:text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95">
                     {t.signin}
                   </Link>
                 )}
             </div>
           </nav>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        <div className={`lg:hidden fixed inset-0 z-50 transition-transform duration-300 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
+          <div className="absolute top-0 left-0 bottom-0 w-64 bg-white shadow-2xl flex flex-col p-6">
+            <div className="flex justify-between items-center mb-10">
+              <span className="text-xl font-bold text-indigo-600">NovaMart</span>
+              <button onClick={() => setIsMenuOpen(false)}>
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+            
+            <nav className="flex flex-col gap-6">
+              <Link to="/" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold ${isActive('/') ? 'text-indigo-600' : 'text-gray-500'}`}>{t.shop}</Link>
+              <Link to="/wishlist" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold ${isActive('/wishlist') ? 'text-indigo-600' : 'text-gray-500'}`}>{t.wishlist}</Link>
+              <Link to="/ai-shopping" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold flex items-center gap-2 ${isActive('/ai-shopping') ? 'text-indigo-600' : 'text-gray-500'}`}>
+                <span>✨</span> {t.ai}
+              </Link>
+              {user && <Link to="/orders" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold ${isActive('/orders') ? 'text-indigo-600' : 'text-gray-500'}`}>{t.orders}</Link>}
+              {user?.role === 'admin' && <Link to="/admin" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold ${isActive('/admin') ? 'text-indigo-600' : 'text-gray-500'}`}>{t.admin}</Link>}
+              {user && (
+                <button onClick={() => { logout(); setIsMenuOpen(false); }} className="text-left text-lg font-bold text-red-500 mt-4 pt-4 border-t">Logout</button>
+              )}
+            </nav>
+
+            <div className="mt-auto pt-10">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Language</p>
+              <div className="flex gap-4">
+                <button onClick={() => setLocale('en')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${locale === 'en' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}>English</button>
+                <button onClick={() => setLocale('hi')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${locale === 'hi' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}`}>हिन्दी</button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -136,7 +181,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <li><Link to="/" className="hover:text-indigo-600">Gift Finder</Link></li>
             </ul>
           </div>
-          <div>
+          <div className="hidden md:block">
             <h4 className="font-bold text-sm uppercase tracking-widest text-gray-900 mb-6">Company</h4>
             <ul className="text-sm text-gray-500 space-y-3">
               <li><Link to="/" className="hover:text-indigo-600">About Us</Link></li>
