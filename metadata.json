@@ -1,0 +1,8 @@
+{
+  "name": "NovaMart AI - Next-Gen E-Commerce",
+  "description": "A feature-rich Amazon/Flipkart-style e-commerce platform powered by Gemini AI, featuring an intelligent shopping assistant, semantic search, automated review summaries, and a comprehensive admin dashboard.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
