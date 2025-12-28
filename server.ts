@@ -1,6 +1,6 @@
 
 import express from 'express';
-import mongoose from 'mongoose';
+import mongoose, { ConnectOptions } from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
@@ -10,14 +10,12 @@ dotenv.config();
 const app = express();
 
 // --- Middleware ---
-// Fix: Cast cors middleware to any to resolve type mismatch between Connect's NextHandleFunction and Express's RequestHandler
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', 
+  origin: (process.env as any).FRONTEND_URL || '*', 
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }) as any);
 
-// Fix: Cast express.json middleware to any to resolve type mismatch between Connect's NextHandleFunction and Express's RequestHandler
 app.use(express.json() as any);
 
 // --- Security Helpers ---
@@ -149,8 +147,8 @@ app.patch('/api/orders/:id/status', async (req, res) => {
 });
 
 // --- Server Start ---
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI;
+const PORT = (process.env as any).PORT || 5000;
+const MONGODB_URI = (process.env as any).MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.error('CRITICAL: MONGODB_URI is missing from environment variables.');
@@ -162,10 +160,8 @@ const maskedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
 console.log(`Connecting to: ${maskedUri}`);
 
 // Ensure proper connection settings for Atlas
-const connectionOptions = {
-  connectTimeoutMS: 15000,
-  socketTimeoutMS: 45000,
-  dbName: 'novamart' // Forces mongoose to use the novamart database
+const connectionOptions: ConnectOptions = {
+  dbName: 'novamart'
 };
 
 mongoose.connect(MONGODB_URI, connectionOptions)
@@ -178,13 +174,5 @@ mongoose.connect(MONGODB_URI, connectionOptions)
     console.error('Type:', err.name);
     console.error('Message:', err.message);
     
-    if (err.message.includes('authentication failed')) {
-      console.error('HINT: Your Username or Password is incorrect in the connection string.');
-      console.error('1. Check MongoDB Atlas -> Database Access.');
-      console.error('2. Ensure password is URL-encoded (e.g., @ becomes %40).');
-      console.error('3. Try creating a new user with a simple password (no special characters).');
-    }
-    
-    // Fallback: Start server anyway so logs are accessible
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (DATABASE OFFLINE)`));
   });
