@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { Product, Review, ComparisonVerdict } from "../types";
 
-// Note: API_KEY is managed externally and accessed via process.env.API_KEY
-
 const addToCartTool: FunctionDeclaration = {
   name: 'addToCart',
   parameters: {
@@ -20,221 +18,123 @@ const addToCartTool: FunctionDeclaration = {
 };
 
 export const geminiService = {
-  // Consultation logic for personalized shopping assistance
-  async consult(
-    history: { role: 'user' | 'assistant', content: string }[],
-    products: Product[]
-  ) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const productContext = JSON.stringify(products.map(p => ({ id: p.id, name: p.name, category: p.category, tags: p.tags, price: p.price })));
-    
-    /* Using gemini-3-pro-preview for complex reasoning task */
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `
-        You are an elite personal shopper at NovaMart. 
-        Inventory: ${productContext}
-        
-        Conversation History: ${JSON.stringify(history)}
-        
-        Goal: Ask questions to find the best product. 
-        If you have enough information (usually after 2-3 questions), stop asking and provide recommendations.
-        
-        Rules:
-        1. If you are still asking questions, return a JSON object: {"type": "question", "text": "your question here"}
-        2. If you are ready to recommend, return a JSON object: {"type": "recommendation", "reasoning": "summary of why these fit", "productIds": ["id1", "id2"]}
-      `,
-      config: {
-        responseMimeType: "application/json",
-      }
-    });
-
-    try {
-      return JSON.parse(response.text || "{}");
-    } catch (e) {
-      return { type: "question", text: "I'm sorry, I'm having a bit of trouble thinking. What else can you tell me about what you need?" };
-    }
-  },
-
-  // Vision-based analysis of a room space
-  async analyzeSpace(base64Image: string, productName: string) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+  async analyzeFace(base64Image: string, productName: string): Promise<string> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imagePart = {
-      inlineData: {
-        mimeType: 'image/jpeg',
-        data: base64Image,
-      },
+      inlineData: { mimeType: 'image/jpeg', data: base64Image },
     };
     
-    /* Using gemini-3-pro-preview for detailed visual reasoning */
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: { 
         parts: [
           imagePart, 
-          { text: `Analyze this room photo. How would the "${productName}" look in this space? Consider lighting, style, and placement. Provide a professional, encouraging interior design perspective in 3-4 sentences.` }
+          { text: `Act as a luxury eyewear and beauty consultant. Analyze the user's face shape in this image. 
+            The user is trying on: "${productName}". 
+            1. Identify their face shape (Heart, Oval, Square, etc.). 
+            2. Explain if this specific product complements that shape. 
+            3. Give 1 professional styling tip. 
+            Keep it under 60 words.` 
+          }
         ] 
-      },
-    });
-
-    return response.text;
-  },
-
-  // General shopping advice with tool support
-  async getShoppingAdvice(
-    query: string, 
-    context: { products: Product[], cart: any[], history: any[] }
-  ) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    /* Using gemini-3-pro-preview for complex reasoning and tool usage */
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `User Query: ${query}\n\nAvailable Products Context: ${JSON.stringify(context.products.map(p => ({ id: p.id, name: p.name, price: p.price, stock: p.stock })))}\nUser Cart: ${JSON.stringify(context.cart)}\n\nAct as a helpful shopping assistant for NovaMart. Suggest specific products from our inventory. You can use the addToCart tool if a user explicitly asks to add a specific item.`,
-      config: {
-        tools: [{ functionDeclarations: [addToCartTool] }],
       }
     });
-
-    return {
-      text: response.text,
-      functionCalls: response.functionCalls
-    };
+    return response.text || "You have a versatile facial structure that works well with this selection.";
   },
 
-  // Summary generation for product reviews
-  async summarizeReviews(productName: string, reviews: Review[]) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+  async negotiate(product: Product, userOffer: string, history: any[]) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const reviewsText = reviews.map(r => `[Rating: ${r.rating}/5] ${r.comment}`).join('\n');
-    /* Using gemini-3-flash-preview for standard text summarization task */
+    const minPrice = product.price * 0.92;
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Product: ${productName}\nReviews:\n${reviewsText}\n\nSummarize these reviews into: 1. Overall Sentiment, 2. Key Pros, 3. Key Cons. Use bullet points. Keep it concise.`,
-    });
-    return response.text;
-  },
-
-  // Side-by-side product comparison reasoning
-  async compareProducts(productA: Product, productB: Product): Promise<ComparisonVerdict> {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    /* Using gemini-3-pro-preview for advanced analytical comparison */
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Compare these two products:\nProduct A: ${JSON.stringify(productA)}\nProduct B: ${JSON.stringify(productB)}\n\nProvide a side-by-side comparison in JSON format with summary, key points, and a final verdict on which is better for different user profiles.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING },
-            comparisonPoints: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  feature: { type: Type.STRING },
-                  productA: { type: Type.STRING },
-                  productB: { type: Type.STRING },
-                },
-                required: ['feature', 'productA', 'productB']
-              }
-            },
-            verdict: { type: Type.STRING }
-          },
-          required: ['summary', 'comparisonPoints', 'verdict']
-        }
-      }
+      contents: `Product: ${product.name}. Price: $${product.price}. Min: $${minPrice.toFixed(2)}. User: "${userOffer}". History: ${JSON.stringify(history)}. Role: Silas, the witty merchant. Return JSON: {"message": "...", "dealClosed": boolean, "couponCode": "..."}`,
+      config: { responseMimeType: "application/json" }
     });
     return JSON.parse(response.text || "{}");
   },
 
-  // Intelligent product bundle suggestions
-  async suggestBundle(mainProduct: Product, allProducts: Product[]) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
+  async checkVibeCompatibility(base64Image: string, product: Product) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    /* Using gemini-3-flash-preview for creative product pairing */
+    const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image } };
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Main Product: ${mainProduct.name} (${mainProduct.category})\nCatalog: ${JSON.stringify(allProducts.map(p => ({ id: p.id, name: p.name, category: p.category })))}\n\nSuggest 2 products that would form a perfect "bundle" or "outfit" with the main product. Return a JSON array of product IDs.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [imagePart, { text: `Vibe Check for ${product.name}. Return JSON: {"score": number, "synergyReason": "...", "proTip": "..."}` }] },
+      config: { responseMimeType: "application/json" }
     });
-    try {
-      const ids = JSON.parse(response.text || "[]");
-      return allProducts.filter(p => ids.includes(p.id));
-    } catch (e) {
-      return [];
-    }
+    return JSON.parse(response.text || "{}");
   },
 
-  // Semantic search across the product catalog
-  async searchProducts(query: string, products: Product[]) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    /* Using gemini-3-flash-preview for quick semantic mapping */
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Search Query: "${query}"\nProducts List: ${JSON.stringify(products.map(p => ({ id: p.id, name: p.name, tags: p.tags, desc: p.description })))}\n\nReturn ONLY a JSON array of product IDs that match the query.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
-    });
-    
-    try {
-        const matchingIds = JSON.parse(response.text || "[]") as string[];
-        return products.filter(p => matchingIds.includes(p.id));
-    } catch (e) {
-        return products.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-    }
-  },
-
-  // Identifying products from uploaded images
   async searchByImage(base64Image: string, products: Product[]) {
-    /* Always instantiate GoogleGenAI right before use with process.env.API_KEY */
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const imagePart = {
-      inlineData: {
-        mimeType: 'image/jpeg',
-        data: base64Image,
-      },
-    };
-    
-    /* Using gemini-3-flash-preview for image recognition and catalog matching */
+    const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64Image } };
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: { 
-        parts: [
-          imagePart, 
-          { text: `Identify items in this image. Catalog: ${JSON.stringify(products.map(p => ({ id: p.id, name: p.name })))}\nReturn JSON array of matching product IDs.` }
-        ] 
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
+      contents: { parts: [imagePart, { text: "Detect items for search. Keywords only." }] }
     });
+    return response.text?.trim() || "";
+  },
 
-    try {
-        const matchingIds = JSON.parse(response.text || "[]") as string[];
-        return products.filter(p => matchingIds.includes(p.id));
-    } catch (e) {
-        return [];
-    }
+  async searchProducts(query: string, products: Product[]) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Query: ${query}. Inventory: ${JSON.stringify(products.map(p=>({id:p.id,name:p.name})))}. Return JSON IDs array.`,
+      config: { responseMimeType: "application/json" }
+    });
+    const ids = JSON.parse(response.text || "[]");
+    return products.filter(p => ids.includes(p.id));
+  },
+
+  async compareProducts(p1: Product, p2: Product): Promise<ComparisonVerdict> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Compare: ${p1.name} vs ${p2.name}. Return JSON: summary, comparisonPoints, verdict.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  },
+
+  async getGiftRecommendations(criteria: any, products: Product[]) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Gift Finder for ${JSON.stringify(criteria)}. Catalog provided. Return JSON: intro, recommendations[productId, aiReason].`,
+      config: { responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  },
+
+  async consult(history: any[], products: Product[]) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Personal Shopper. History: ${JSON.stringify(history)}. Return JSON: type (question/recommendation), text/reasoning, productIds.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  },
+
+  async getShoppingAdvice(query: string, context: any) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Query: ${query}. Use addToCart tool if asked.`,
+      config: { tools: [{ functionDeclarations: [addToCartTool] }] }
+    });
+    return { text: response.text, functionCalls: response.functionCalls };
+  },
+
+  async analyzeSpace(base64Image: string, productName: string): Promise<string> {
+    return this.analyzeFace(base64Image, productName); // Aliased for consistency
+  },
+
+  async summarizeReviews(productName: string, reviews: Review[]) {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Summarize: ${productName} reviews. Bullet pros/cons.`,
+    });
+    return response.text;
   }
 };

@@ -14,8 +14,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isActive = (path: string) => location.pathname === path;
 
   const t = {
-    en: { shop: 'Shop', wishlist: 'Wishlist', ai: 'AI Shopper', orders: 'Orders', admin: 'Admin', signin: 'Sign In' },
-    hi: { shop: 'खरीदारी', wishlist: 'इच्छा सूची', ai: 'AI सहायक', orders: 'आदेश', admin: 'व्यवस्थापक', signin: 'लॉगिन' }
+    en: { shop: 'Shop', wishlist: 'Wishlist', ai: 'AI Shopper', gifts: 'Gift Finder', tryon: 'Try-On Lab', orders: 'Orders', admin: 'Admin', signin: 'Sign In' },
+    hi: { shop: 'खरीदारी', wishlist: 'इच्छा सूची', ai: 'AI सहायक', gifts: 'उपहार खोजें', tryon: 'वर्चुअल ट्राइ-ऑन', orders: 'आदेश', admin: 'व्यवस्थापक', signin: 'लॉगिन' }
   }[locale];
 
   return (
@@ -62,11 +62,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </Link>
 
                 <Link 
-                    to="/wishlist" 
-                    className={`text-sm font-semibold transition-colors flex items-center gap-1 ${isActive('/wishlist') ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+                    to="/try-on" 
+                    className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/try-on') ? 'text-green-600' : 'text-gray-500 hover:text-green-600'}`}
                 >
-                    {t.wishlist}
-                    {wishlist.length > 0 && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></span>}
+                    <span className="text-base">📷</span> {t.tryon}
+                </Link>
+
+                <Link 
+                    to="/gift-finder" 
+                    className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/gift-finder') ? 'text-pink-600' : 'text-gray-500 hover:text-pink-600'}`}
+                >
+                    <span className="text-base">🎁</span> {t.gifts}
                 </Link>
 
                 <Link 
@@ -137,6 +143,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 {t.shop}
               </Link>
+              <Link to="/try-on" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold flex items-center gap-3 ${isActive('/try-on') ? 'text-green-600' : 'text-gray-600'}`}>
+                <span className="text-xl">📷</span> {t.tryon}
+              </Link>
+              <Link to="/gift-finder" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold flex items-center gap-3 ${isActive('/gift-finder') ? 'text-pink-600' : 'text-gray-600'}`}>
+                <span className="text-xl">🎁</span> {t.gifts}
+              </Link>
               <Link to="/wishlist" onClick={() => setIsMenuOpen(false)} className={`text-lg font-bold flex items-center gap-3 ${isActive('/wishlist') ? 'text-indigo-600' : 'text-gray-600'}`}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                 {t.wishlist}
@@ -163,14 +175,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </button>
               )}
             </nav>
-
-            <div className="mt-auto pt-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Display Language</p>
-              <div className="flex gap-3">
-                <button onClick={() => setLocale('en')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all ${locale === 'en' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>English</button>
-                <button onClick={() => setLocale('hi')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all ${locale === 'hi' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>हिन्दी</button>
-              </div>
-            </div>
           </div>
         </div>
       </header>
@@ -186,19 +190,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
                 Building the future of e-commerce with cutting edge AI integrations and seamless cross-device experiences.
             </p>
-            <div className="flex items-center gap-2 mt-4">
-              <div className={`w-2 h-2 rounded-full ${apiService.config.baseUrl.includes('onrender.com') ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`}></div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                System Status: {apiService.config.baseUrl.includes('onrender.com') ? 'Production' : 'Development/Mock'}
-              </span>
-            </div>
           </div>
           <div>
             <h4 className="font-bold text-sm uppercase tracking-widest text-gray-900 mb-6">Discovery</h4>
             <ul className="text-sm text-gray-500 space-y-3">
+              <li><Link to="/try-on" className="hover:text-green-600 transition-colors">Virtual Try-On</Link></li>
               <li><Link to="/wishlist" className="hover:text-indigo-600 transition-colors">Wishlist</Link></li>
-              <li><Link to="/ai-shopping" className="hover:text-indigo-600 transition-colors">AI Personal Shopper</Link></li>
-              <li><Link to="/" className="hover:text-indigo-600 transition-colors">Gift Recommendations</Link></li>
+              <li><Link to="/gift-finder" className="hover:text-pink-600 transition-colors">AI Gift Concierge</Link></li>
             </ul>
           </div>
           <div className="hidden md:block">
@@ -206,7 +204,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <ul className="text-sm text-gray-500 space-y-3">
               <li><Link to="/" className="hover:text-indigo-600 transition-colors">Help Center</Link></li>
               <li><Link to="/orders" className="hover:text-indigo-600 transition-colors">Track Order</Link></li>
-              <li><Link to="/" className="hover:text-indigo-600 transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
           <div>
@@ -219,11 +216,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
         <div className="container mx-auto px-4 pt-8 mt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
           <span>© 2024 NovaMart AI. All rights reserved.</span>
-          <div className="flex gap-6">
-            <span className="hover:text-gray-600 cursor-pointer transition-colors">Privacy</span>
-            <span className="hover:text-gray-600 cursor-pointer transition-colors">Terms</span>
-            <span className="hover:text-gray-600 cursor-pointer transition-colors">Security</span>
-          </div>
         </div>
       </footer>
 

@@ -73,8 +73,15 @@ const Home: React.FC = () => {
       const base64 = (reader.result as string).split(',')[1];
       setIsAISearching(true);
       try {
-        await geminiService.searchByImage(base64, products);
-        refreshProducts(searchQuery, activeCategory);
+        // Fix: Detect search keywords from image using AI
+        const detectedSearch = await geminiService.searchByImage(base64, products);
+        if (detectedSearch) {
+          setSearchQuery(detectedSearch);
+          addNotification('success', `AI Image Search: "${detectedSearch}"`);
+          await refreshProducts(detectedSearch, activeCategory);
+        }
+      } catch (err) {
+        addNotification('error', 'Failed to analyze image with AI.');
       } finally {
         setIsAISearching(false);
       }

@@ -31,6 +31,9 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Custom styles for Try-On Canvas */
+        .mirror-mode { transform: scaleX(-1); }
     </style>
 <script type="importmap">
 {
@@ -45,14 +48,17 @@
     "cors": "https://esm.sh/cors@^2.8.5",
     "dotenv": "https://esm.sh/dotenv@^17.2.3",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.0"
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@mediapipe/face_mesh": "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633502327/face_mesh.js"
   }
 }
 </script>
+<!-- MediaPipe Legacy Script support -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-50 text-gray-900">
     <div id="root"></div>
-    <!-- Vite handles the module loading automatically during build -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>

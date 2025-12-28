@@ -11,6 +11,8 @@ import AdminOrderDetails from './pages/AdminOrderDetails';
 import Orders from './pages/Orders';
 import Checkout from './pages/Checkout';
 import ShopWithAI from './pages/ShopWithAI';
+import GiftFinder from './pages/GiftFinder';
+import VirtualTryOn from './pages/VirtualTryOn';
 import Wishlist from './pages/Wishlist';
 import ComparisonTray from './components/ComparisonTray';
 import { apiService } from './services/api';
@@ -199,6 +201,8 @@ const App: React.FC = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/ai-shopping" element={<ShopWithAI />} />
+            <Route path="/gift-finder" element={<GiftFinder />} />
+            <Route path="/try-on" element={<VirtualTryOn />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
