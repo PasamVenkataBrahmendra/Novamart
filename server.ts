@@ -64,24 +64,29 @@ const Order = mongoose.model('Order', orderSchema);
 const User = mongoose.model('User', userSchema);
 
 // --- Database Seeder ---
-const seedDatabase = async () => {
+const seedDatabase = async (force = false) => {
   try {
     const count = await Product.countDocuments();
-    if (count > 0) {
+    if (count > 0 && !force) {
       console.log(`📊 Database already has ${count} products. Skipping seed.`);
       return;
+    }
+
+    if (force) {
+        console.log('🗑️ Force seed requested. Clearing old products...');
+        await Product.deleteMany({});
     }
 
     console.log('🌱 Seeding database with 1,000 products...');
     
     const CATEGORIES = ['Electronics', 'Fashion', 'Home', 'Mobiles', 'Accessories', 'Grocery', 'Appliances', 'Health', 'Beauty', 'Sports', 'Books'];
-    const ADJECTIVES = ['Premium', 'Ultra', 'Classic', 'Modern', 'Eco', 'Smart', 'Sleek', 'Durable', 'Elite', 'Titanium'];
+    const ADJECTIVES = ['Premium', 'Ultra', 'Classic', 'Modern', 'Eco', 'Smart', 'Sleek', 'Durable', 'Elite', 'Titanium', 'Professional', 'Minimalist', 'Aura', 'Zen', 'Power'];
     const TYPES: Record<string, string[]> = {
-      'Electronics': ['Headphones', 'Speaker', 'Monitor', 'Keyboard', 'Mouse'],
-      'Fashion': ['Sneakers', 'Jacket', 'T-Shirt', 'Jeans', 'Watch'],
-      'Home': ['Desk', 'Lamp', 'Chair', 'Vacuum', 'Purifier'],
-      'Mobiles': ['Smartphone', 'Foldable', 'Tablet'],
-      'Accessories': ['Wallet', 'Watch', 'Bag', 'Sunglasses']
+      'Electronics': ['Headphones', 'Speaker', 'Monitor', 'Keyboard', 'Mouse', 'Router', 'Tablet', 'Camera', 'Drone', 'Hub'],
+      'Fashion': ['Sneakers', 'Jacket', 'T-Shirt', 'Jeans', 'Dress', 'Scarf', 'Boots', 'Hat', 'Watch', 'Belt'],
+      'Home': ['Desk', 'Lamp', 'Chair', 'Vacuum', 'Purifier', 'Skillet', 'Blender', 'Fan', 'Organizer', 'Clock'],
+      'Mobiles': ['Smartphone', 'Foldable', 'Gaming Phone', 'Budget Phone', 'Charger', 'Case', 'Screen Protector'],
+      'Accessories': ['Wallet', 'Watch', 'Bag', 'Sunglasses', 'Jewelry', 'Cap', 'Backpack']
     };
 
     const productsToInsert = [];
@@ -92,23 +97,25 @@ const seedDatabase = async () => {
       const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
       
       productsToInsert.push({
-        id: i.toString(),
+        id: `PROD-${i}`,
         name: `${adj} ${type} ${1000 + i}`,
-        description: `High-quality ${adj.toLowerCase()} ${type.toLowerCase()} designed for modern performance and durability in the ${category.toLowerCase()} segment.`,
-        price: parseFloat((Math.random() * (1500 - 20) + 20).toFixed(2)),
+        description: `Experience the peak of quality with this ${adj.toLowerCase()} ${type.toLowerCase()} from our latest ${category.toLowerCase()} collection. Engineered for excellence.`,
+        price: parseFloat((Math.random() * (1500 - 15) + 15).toFixed(2)),
         category,
-        image: `https://images.unsplash.com/photo-${1500000000000 + (i % 500)}?auto=format&fit=crop&q=80&w=600&sig=${i}`,
-        rating: parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)),
-        reviewsCount: Math.floor(Math.random() * 2000),
-        stock: Math.floor(Math.random() * 100),
-        tags: [category.toLowerCase(), type.toLowerCase(), adj.toLowerCase()]
+        image: `https://images.unsplash.com/photo-${1500000000000 + (i % 800)}?auto=format&fit=crop&q=80&w=600&sig=${i}`,
+        rating: parseFloat((Math.random() * (5 - 3.8) + 3.8).toFixed(1)),
+        reviewsCount: Math.floor(Math.random() * 5000),
+        stock: Math.floor(Math.random() * 100) + 10,
+        tags: [category.toLowerCase(), type.toLowerCase(), adj.toLowerCase(), 'featured', 'new']
       });
     }
 
     await Product.insertMany(productsToInsert);
-    console.log('✅ Successfully seeded 1,000 products into MongoDB Atlas.');
+    console.log(`✅ Successfully seeded ${productsToInsert.length} products into MongoDB Atlas.`);
+    return productsToInsert.length;
   } catch (error) {
     console.error('❌ Seeding error:', error);
+    throw error;
   }
 };
 
@@ -120,6 +127,15 @@ app.get('/api/health', (req: any, res: any) => {
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date() 
   });
+});
+
+app.post('/api/products/seed', async (req: any, res: any) => {
+    try {
+        const count = await seedDatabase(true);
+        res.json({ success: true, message: `Database seeded with ${count} products.` });
+    } catch (err) {
+        res.status(500).json({ error: 'Seeding failed' });
+    }
 });
 
 app.post('/api/auth/login', async (req: any, res: any) => {
@@ -154,7 +170,8 @@ app.get('/api/products', async (req: any, res: any) => {
         { tags: { $in: [new RegExp(search as string, 'i')] } }
       ];
     }
-    const products = await Product.find(query).limit(100);
+    // Limit increased to 1,000 to satisfy user request
+    const products = await Product.find(query).limit(1000);
     res.json(products);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch products' });

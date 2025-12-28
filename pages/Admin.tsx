@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/StoreContext';
 import { Link, Navigate } from 'react-router-dom';
 import { geminiService } from '../services/gemini';
+import { apiService } from '../services/api';
 import { Product } from '../types';
 
 const Admin: React.FC = () => {
-  const { user, products, orders } = useStore();
+  const { user, products, orders, refreshProducts, addNotification } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   // Simulation of weekly sales data for charts
@@ -52,6 +54,25 @@ const Admin: React.FC = () => {
     }
   };
 
+  const handleForceSeed = async () => {
+    if (!confirm('This will wipe your current database and insert 1,000 new products. Proceed?')) return;
+    setIsSeeding(true);
+    try {
+      const response = await fetch(`${apiService.config.baseUrl}/products/seed`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        addNotification('success', '1,000 products seeded successfully!');
+        await refreshProducts();
+      } else {
+          throw new Error('Seed failed');
+      }
+    } catch (error) {
+      addNotification('error', 'Neural sync failed. Check server logs.');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const totalSales = orders.reduce((acc, order) => acc + order.total, 0);
 
   return (
@@ -62,8 +83,12 @@ const Admin: React.FC = () => {
           <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] mt-2">Operational Analytics • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none bg-indigo-600 text-white px-6 lg:px-8 py-4 rounded-[20px] lg:rounded-[24px] text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">
-              New Product
+            <button 
+                onClick={handleForceSeed}
+                disabled={isSeeding}
+                className="flex-1 md:flex-none bg-indigo-600 text-white px-6 lg:px-8 py-4 rounded-[20px] lg:rounded-[24px] text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isSeeding ? 'Syncing...' : 'Force Neural Seed'}
             </button>
             <button className="flex-1 md:flex-none bg-white border border-gray-100 px-6 lg:px-8 py-4 rounded-[20px] lg:rounded-[24px] text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
               Export Stats

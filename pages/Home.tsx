@@ -60,7 +60,6 @@ const Home: React.FC = () => {
   const handleCategoryChange = (cat: string) => {
     setActiveCategory(cat);
     refreshProducts(undefined, cat);
-    // On mobile, sometimes it's nice to scroll to top when category changes
     if (window.innerWidth < 1024) {
       window.scrollTo({ top: 400, behavior: 'smooth' });
     }
@@ -188,7 +187,8 @@ const Home: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-10">
-              {products.slice(0, 24).map(p => <ProductCard key={p.id} product={p} />)}
+              {/* SLICE REMOVED: Now showing full catalog from state */}
+              {products.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         )}
 
