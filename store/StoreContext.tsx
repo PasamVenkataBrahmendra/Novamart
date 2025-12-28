@@ -30,7 +30,8 @@ interface StoreState {
   applyCoupon: (code: string) => boolean;
   placeOrder: (address: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
-  login: (email: string) => Promise<void>;
+  login: (email: string, password?: string) => Promise<void>;
+  signup: (name: string, email: string, password?: string) => Promise<void>;
   logout: () => void;
   refreshProducts: (query?: string, category?: string) => Promise<void>;
   addReview: (review: Omit<Review, 'id' | 'date'>) => void;
@@ -196,13 +197,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addNotification('info', `Order ${orderId} status updated to ${status}.`);
   };
 
-  const login = async (email: string) => {
-    const userData = await apiService.auth.login(email);
+  const login = async (email: string, password?: string) => {
+    const userData = await apiService.auth.login(email, password);
     setUser(userData);
     localStorage.setItem('nova_user', JSON.stringify(userData));
     const userOrders = await apiService.orders.getUserOrders(userData.id);
     setOrders(userOrders);
     addNotification('success', `Welcome back, ${userData.name}!`);
+  };
+
+  const signup = async (name: string, email: string, password?: string) => {
+    const userData = await apiService.auth.signup(name, email, password);
+    setUser(userData);
+    localStorage.setItem('nova_user', JSON.stringify(userData));
+    addNotification('success', `Welcome to NovaMart, ${userData.name}!`);
   };
 
   const logout = () => {
@@ -227,7 +235,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       products, isLoading, cart, wishlist, compareList, user, orders, reviews, notifications, recentlyViewed, activeCoupon,
       locale, setLocale,
       addToCart, removeFromCart, updateCartQuantity, clearCart, toggleWishlist, toggleCompare, trackView,
-      applyCoupon, placeOrder, updateOrderStatus, login, logout, refreshProducts, addReview, addNotification, watchPrice
+      applyCoupon, placeOrder, updateOrderStatus, login, signup, logout, refreshProducts, addReview, addNotification, watchPrice
     }}>
       {children}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none">

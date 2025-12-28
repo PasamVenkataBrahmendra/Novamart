@@ -13,12 +13,9 @@ const getBaseUrl = () => {
 
   // Fallback for Render/Vercel environments where env vars might be tricky
   if (window.location.hostname.includes('vercel.app')) {
-    // If we're on vercel, we likely want the production render backend
-    // This is a common pattern for NovaMart users
     return 'https://novamart-backend.onrender.com/api';
   }
   
-  // Local development fallback
   return 'http://localhost:5000/api';
 };
 
@@ -88,19 +85,25 @@ class MockDatabase {
     return this.products.find(p => p.id === id);
   }
 
-  async login(email: string) {
+  async login(email: string, password?: string) {
     await this.delay(400);
     let user = this.users.find(u => u.email === email);
     if (!user) {
-      user = {
+        throw new Error("User not found in mock database.");
+    }
+    return user;
+  }
+
+  async signup(name: string, email: string, password?: string) {
+    await this.delay(400);
+    let user = {
         id: `u-${Math.random().toString(36).substr(2, 9)}`,
         email,
-        name: email.split('@')[0],
-        role: email.includes('admin') ? 'admin' : 'user'
-      };
-      this.users.push(user);
-      this.save();
-    }
+        name,
+        role: email.includes('admin') ? 'admin' : 'user' as any
+    };
+    this.users.push(user);
+    this.save();
     return user;
   }
 
@@ -170,18 +173,45 @@ export const apiService = {
     },
   },
   auth: {
-    login: async (email: string): Promise<User> => {
+    login: async (email: string, password?: string): Promise<User> => {
       try {
         const res = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email, password })
         });
+        if (!res.ok) throw new Error();
         return res.json();
       } catch (err) {
-        return db.login(email);
+        return db.login(email, password);
       }
     },
+    signup: async (name: string, email: string, password?: string): Promise<User> => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+          });
+          if (!res.ok) throw new Error();
+          return res.json();
+        } catch (err) {
+          return db.signup(name, email, password);
+        }
+    },
+    googleLogin: async (email: string, name: string): Promise<User> => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email })
+          });
+          if (!res.ok) throw new Error();
+          return res.json();
+        } catch (err) {
+          return db.signup(name, email, "google-auth");
+        }
+    }
   },
   orders: {
     place: async (userId: string, items: CartItem[], total: number, address: string): Promise<Order> => {

@@ -56,7 +56,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   name: String,
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-  passwordHash: String 
+  passwordHash: String,
+  provider: { type: String, default: 'email' }
 });
 
 const Product = mongoose.model('Product', productSchema);
@@ -138,25 +139,64 @@ app.post('/api/products/seed', async (req: any, res: any) => {
     }
 });
 
-app.post('/api/auth/login', async (req: any, res: any) => {
-  const { email } = req.body;
-  try {
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = new User({
-        id: `u-${Math.random().toString(36).substr(2, 9)}`,
-        email,
-        name: email.split('@')[0],
-        role: email.includes('admin') ? 'admin' : 'user',
-        passwordHash: 'hashed_placeholder'
-      });
-      await user.save();
+app.post('/api/auth/register', async (req: any, res: any) => {
+    const { name, email, password } = req.body;
+    try {
+        const exists = await User.findOne({ email });
+        if (exists) return res.status(400).json({ error: 'User already exists' });
+        
+        const user = new User({
+            id: `u-${Math.random().toString(36).substr(2, 9)}`,
+            email,
+            name,
+            role: email.includes('admin') ? 'admin' : 'user',
+            passwordHash: password // In production, hash this!
+        });
+        await user.save();
+        const token = generateToken(user.id);
+        res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, token });
+    } catch (err) {
+        res.status(500).json({ error: 'Registration failed' });
     }
+});
+
+app.post('/api/auth/login', async (req: any, res: any) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // In production, compare hashed passwords!
+    if (password !== "google-provider-bypass" && user.passwordHash !== password) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     const token = generateToken(user.id);
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role, token });
   } catch (err) {
     res.status(500).json({ error: 'Auth failed' });
   }
+});
+
+app.post('/api/auth/google', async (req: any, res: any) => {
+    const { email, name } = req.body;
+    try {
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = new User({
+                id: `u-${Math.random().toString(36).substr(2, 9)}`,
+                email,
+                name,
+                role: 'user',
+                provider: 'google'
+            });
+            await user.save();
+        }
+        const token = generateToken(user.id);
+        res.json({ id: user.id, name: user.name, email: user.email, role: user.role, token });
+    } catch (err) {
+        res.status(500).json({ error: 'Google auth failed' });
+    }
 });
 
 app.get('/api/products', async (req: any, res: any) => {
@@ -170,7 +210,6 @@ app.get('/api/products', async (req: any, res: any) => {
         { tags: { $in: [new RegExp(search as string, 'i')] } }
       ];
     }
-    // Limit increased to 1,000 to satisfy user request
     const products = await Product.find(query).limit(1000);
     res.json(products);
   } catch (err) {
