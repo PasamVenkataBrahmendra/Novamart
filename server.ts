@@ -11,7 +11,7 @@ const app = express();
 
 // --- Middleware ---
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Restrict this in production for security
+  origin: process.env.FRONTEND_URL || '*', 
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -19,7 +19,6 @@ app.use(express.json());
 
 // --- Security Helpers ---
 const generateToken = (userId: string) => {
-    // Simulate a JWT token string
     return `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(JSON.stringify({id: userId, iat: Date.now()}))}.signature`;
 };
 
@@ -65,10 +64,12 @@ const User = mongoose.model('User', userSchema);
 
 // --- API Routes ---
 
-// Health Check
-app.get('/api/health', (req, res) => res.json({ status: 'active', timestamp: new Date() }));
+app.get('/api/health', (req, res) => res.json({ 
+  status: 'active', 
+  database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+  timestamp: new Date() 
+}));
 
-// Auth
 app.post('/api/auth/login', async (req, res) => {
   const { email } = req.body;
   try {
@@ -90,7 +91,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Products
 app.get('/api/products', async (req, res) => {
   try {
     const { category, search } = req.query;
@@ -109,7 +109,6 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Orders
 app.post('/api/orders', async (req, res) => {
   try {
     const orderData = {
@@ -149,17 +148,31 @@ const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.log('⚠️ MONGODB_URI not found in environment. Server will start in mock-only mode or require a local DB.');
+  console.error('CRITICAL: MONGODB_URI is missing from environment variables.');
+  process.exit(1);
 }
 
-mongoose.connect(MONGODB_URI || 'mongodb://localhost:27017/novamart')
+// Ensure proper connection settings for Atlas
+const connectionOptions = {
+  autoIndex: true,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+};
+
+mongoose.connect(MONGODB_URI, connectionOptions)
   .then(() => {
-    console.log('✅ Connected to MongoDB');
+    console.log('✅ Connected to MongoDB Atlas Successfully');
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch(err => {
-    console.error('❌ MongoDB Connection Error:', err);
-    // In many cloud environments, we want the process to stay alive to show health logs 
-    // but we can't serve real DB requests.
+    console.error('❌ MongoDB Connection Error Details:');
+    console.error('Error Name:', err.name);
+    console.error('Error Code:', err.code);
+    console.error('Error Message:', err.message);
+    if (err.message.includes('ENOTFOUND')) {
+      console.error('HINT: Your password likely contains special characters like "@" or "!". You MUST URL-encode them (e.g., @ becomes %40).');
+    }
+    // We keep the server alive so Render doesn't immediately restart-loop, 
+    // allowing you to see the error logs.
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (DATABASE OFFLINE)`));
   });
