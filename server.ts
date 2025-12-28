@@ -10,12 +10,15 @@ dotenv.config();
 const app = express();
 
 // --- Middleware ---
+// Fix: Cast cors middleware to any to resolve type mismatch between Connect's NextHandleFunction and Express's RequestHandler
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*', 
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json());
+}) as any);
+
+// Fix: Cast express.json middleware to any to resolve type mismatch between Connect's NextHandleFunction and Express's RequestHandler
+app.use(express.json() as any);
 
 // --- Security Helpers ---
 const generateToken = (userId: string) => {
@@ -64,11 +67,13 @@ const User = mongoose.model('User', userSchema);
 
 // --- API Routes ---
 
-app.get('/api/health', (req, res) => res.json({ 
-  status: 'active', 
-  database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-  timestamp: new Date() 
-}));
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'active', 
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date() 
+  });
+});
 
 app.post('/api/auth/login', async (req, res) => {
   const { email } = req.body;
@@ -152,11 +157,15 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
+// Security: Mask password for logging
+const maskedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+console.log(`Connecting to: ${maskedUri}`);
+
 // Ensure proper connection settings for Atlas
 const connectionOptions = {
-  autoIndex: true,
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: 15000,
   socketTimeoutMS: 45000,
+  dbName: 'novamart' // Forces mongoose to use the novamart database
 };
 
 mongoose.connect(MONGODB_URI, connectionOptions)
@@ -166,13 +175,16 @@ mongoose.connect(MONGODB_URI, connectionOptions)
   })
   .catch(err => {
     console.error('❌ MongoDB Connection Error Details:');
-    console.error('Error Name:', err.name);
-    console.error('Error Code:', err.code);
-    console.error('Error Message:', err.message);
-    if (err.message.includes('ENOTFOUND')) {
-      console.error('HINT: Your password likely contains special characters like "@" or "!". You MUST URL-encode them (e.g., @ becomes %40).');
+    console.error('Type:', err.name);
+    console.error('Message:', err.message);
+    
+    if (err.message.includes('authentication failed')) {
+      console.error('HINT: Your Username or Password is incorrect in the connection string.');
+      console.error('1. Check MongoDB Atlas -> Database Access.');
+      console.error('2. Ensure password is URL-encoded (e.g., @ becomes %40).');
+      console.error('3. Try creating a new user with a simple password (no special characters).');
     }
-    // We keep the server alive so Render doesn't immediately restart-loop, 
-    // allowing you to see the error logs.
+    
+    // Fallback: Start server anyway so logs are accessible
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (DATABASE OFFLINE)`));
   });

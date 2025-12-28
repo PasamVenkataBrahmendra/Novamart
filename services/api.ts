@@ -4,11 +4,19 @@ import { MOCK_PRODUCTS, MOCK_REVIEWS } from '../constants';
 
 /**
  * DEPLOYMENT CONFIGURATION:
- * In production, set the 'VITE_API_URL' environment variable to your deployed backend URL.
- * If no URL is provided, the app defaults to the robust Mock Database (LocalStorage).
+ * In production, the 'VITE_API_URL' should point to your Render backend.
  */
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
-const USE_REAL_BACKEND = Boolean((import.meta as any).env?.VITE_API_URL); 
+// Detect if we are in a browser environment that supports process.env or import.meta.env
+const getBaseUrl = () => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL || (window as any)._env_?.VITE_API_URL;
+  if (envUrl) return envUrl;
+  
+  // Fallback for local development
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getBaseUrl();
+const USE_REAL_BACKEND = API_BASE_URL.includes('http'); 
 
 class MockDatabase {
   private products: Product[] = [];
@@ -43,7 +51,7 @@ class MockDatabase {
   private save() {
     try {
       localStorage.setItem('novamart_db', JSON.stringify({
-        products: this.products.slice(0, 100), // Only persist first 100 to avoid LS limits
+        products: this.products.slice(0, 100),
         users: this.users,
         orders: this.orders,
         reviews: this.reviews
@@ -127,104 +135,87 @@ class MockDatabase {
 const db = new MockDatabase();
 
 export const apiService = {
+  config: {
+    baseUrl: API_BASE_URL,
+    isMock: !USE_REAL_BACKEND
+  },
   products: {
     getAll: async (q?: string, cat?: string): Promise<Product[]> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const url = new URL(`${API_BASE_URL}/products`);
-          if (q) url.searchParams.append('search', q);
-          if (cat) url.searchParams.append('category', cat);
-          const res = await fetch(url.toString());
-          if (!res.ok) throw new Error('Network response was not ok');
-          return res.json();
-        } catch (err) {
-          console.error("Backend unreachable, falling back to Mock DB", err);
-          return db.getProducts(q, cat);
-        }
+      try {
+        const url = new URL(`${API_BASE_URL}/products`);
+        if (q) url.searchParams.append('search', q);
+        if (cat) url.searchParams.append('category', cat);
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error('Backend responded with error');
+        return res.json();
+      } catch (err) {
+        console.warn("Backend unreachable, using local database.", err);
+        return db.getProducts(q, cat);
       }
-      return db.getProducts(q, cat);
     },
     getOne: async (id: string): Promise<Product | undefined> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/products/${id}`);
-          return res.json();
-        } catch (err) {
-          return db.getProductById(id);
-        }
+      try {
+        const res = await fetch(`${API_BASE_URL}/products/${id}`);
+        return res.json();
+      } catch (err) {
+        return db.getProductById(id);
       }
-      return db.getProductById(id);
     },
   },
   auth: {
     login: async (email: string): Promise<User> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-          });
-          return res.json();
-        } catch (err) {
-          return db.login(email);
-        }
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        return res.json();
+      } catch (err) {
+        return db.login(email);
       }
-      return db.login(email);
     },
   },
   orders: {
     place: async (userId: string, items: CartItem[], total: number, address: string): Promise<Order> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, items, total, shippingAddress: address })
-          });
-          return res.json();
-        } catch (err) {
-          return db.placeOrder(userId, items, total, address);
-        }
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, items, total, shippingAddress: address })
+        });
+        return res.json();
+      } catch (err) {
+        return db.placeOrder(userId, items, total, address);
       }
-      return db.placeOrder(userId, items, total, address);
     },
     getUserOrders: async (userId: string): Promise<Order[]> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/orders/user/${userId}`);
-          return res.json();
-        } catch (err) {
-          return db.getOrders(userId);
-        }
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders/user/${userId}`);
+        return res.json();
+      } catch (err) {
+        return db.getOrders(userId);
       }
-      return db.getOrders(userId);
     },
     getAll: async (): Promise<Order[]> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          const res = await fetch(`${API_BASE_URL}/orders`);
-          return res.json();
-        } catch (err) {
-          return db.getOrders();
-        }
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders`);
+        return res.json();
+      } catch (err) {
+        return db.getOrders();
       }
-      return db.getOrders();
     },
     updateStatus: async (id: string, status: OrderStatus): Promise<void> => {
-      if (USE_REAL_BACKEND) {
-        try {
-          await fetch(`${API_BASE_URL}/orders/${id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-          });
-          return;
-        } catch (err) {
-          return db.updateOrderStatus(id, status);
-        }
+      try {
+        await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        return;
+      } catch (err) {
+        return db.updateOrderStatus(id, status);
       }
-      return db.updateOrderStatus(id, status);
     },
   }
 };

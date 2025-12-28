@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/StoreContext';
+import { apiService } from '../services/api';
 import AIChatbot from './AIChatbot';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -120,6 +121,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <p className="text-gray-400 text-sm leading-relaxed">
                 Building the future of e-commerce with cutting edge AI integrations.
             </p>
+            <div className="flex items-center gap-2 mt-4">
+              <div className={`w-2 h-2 rounded-full ${apiService.config.baseUrl.includes('onrender.com') ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></div>
+              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                Backend: {apiService.config.baseUrl.includes('onrender.com') ? 'Live Production' : 'Mock/Local'}
+              </span>
+            </div>
           </div>
           <div>
             <h4 className="font-bold text-sm uppercase tracking-widest text-gray-900 mb-6">Discovery</h4>
