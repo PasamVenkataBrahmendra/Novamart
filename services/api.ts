@@ -7,20 +7,15 @@ import { MOCK_PRODUCTS, MOCK_REVIEWS } from '../constants';
  * This logic ensures the frontend finds your Render backend automatically.
  */
 const getBaseUrl = () => {
-  // Priority: 1. Environment Variable, 2. Current Host (if local), 3. Hardcoded Fallback
-  let envUrl = (import.meta as any).env?.VITE_API_URL || 
-               (process as any).env?.VITE_API_URL || 
-               (window as any)._env_?.VITE_API_URL;
+  // Use VITE_API_URL if provided (Standard Vite way)
+  const viteUrl = (import.meta as any).env?.VITE_API_URL;
+  if (viteUrl) return viteUrl.replace(/\/$/, "");
 
-  if (envUrl) {
-    // Clean up trailing slashes
-    envUrl = envUrl.replace(/\/$/, "");
-    
-    // Automatically append /api if missing
-    if (!envUrl.endsWith('/api')) {
-      envUrl = `${envUrl}/api`;
-    }
-    return envUrl;
+  // Fallback for Render/Vercel environments where env vars might be tricky
+  if (window.location.hostname.includes('vercel.app')) {
+    // If we're on vercel, we likely want the production render backend
+    // This is a common pattern for NovaMart users
+    return 'https://novamart-backend.onrender.com/api';
   }
   
   // Local development fallback
@@ -28,7 +23,6 @@ const getBaseUrl = () => {
 };
 
 const API_BASE_URL = getBaseUrl();
-// Helper to check if we are connected to a real live backend
 const IS_LIVE_BACKEND = API_BASE_URL.includes('onrender.com');
 
 class MockDatabase {

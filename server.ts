@@ -63,10 +63,57 @@ const Product = mongoose.model('Product', productSchema);
 const Order = mongoose.model('Order', orderSchema);
 const User = mongoose.model('User', userSchema);
 
+// --- Database Seeder ---
+const seedDatabase = async () => {
+  try {
+    const count = await Product.countDocuments();
+    if (count > 0) {
+      console.log(`📊 Database already has ${count} products. Skipping seed.`);
+      return;
+    }
+
+    console.log('🌱 Seeding database with 1,000 products...');
+    
+    const CATEGORIES = ['Electronics', 'Fashion', 'Home', 'Mobiles', 'Accessories', 'Grocery', 'Appliances', 'Health', 'Beauty', 'Sports', 'Books'];
+    const ADJECTIVES = ['Premium', 'Ultra', 'Classic', 'Modern', 'Eco', 'Smart', 'Sleek', 'Durable', 'Elite', 'Titanium'];
+    const TYPES: Record<string, string[]> = {
+      'Electronics': ['Headphones', 'Speaker', 'Monitor', 'Keyboard', 'Mouse'],
+      'Fashion': ['Sneakers', 'Jacket', 'T-Shirt', 'Jeans', 'Watch'],
+      'Home': ['Desk', 'Lamp', 'Chair', 'Vacuum', 'Purifier'],
+      'Mobiles': ['Smartphone', 'Foldable', 'Tablet'],
+      'Accessories': ['Wallet', 'Watch', 'Bag', 'Sunglasses']
+    };
+
+    const productsToInsert = [];
+    for (let i = 1; i <= 1000; i++) {
+      const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+      const types = TYPES[category] || ['Item'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+      
+      productsToInsert.push({
+        id: i.toString(),
+        name: `${adj} ${type} ${1000 + i}`,
+        description: `High-quality ${adj.toLowerCase()} ${type.toLowerCase()} designed for modern performance and durability in the ${category.toLowerCase()} segment.`,
+        price: parseFloat((Math.random() * (1500 - 20) + 20).toFixed(2)),
+        category,
+        image: `https://images.unsplash.com/photo-${1500000000000 + (i % 500)}?auto=format&fit=crop&q=80&w=600&sig=${i}`,
+        rating: parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)),
+        reviewsCount: Math.floor(Math.random() * 2000),
+        stock: Math.floor(Math.random() * 100),
+        tags: [category.toLowerCase(), type.toLowerCase(), adj.toLowerCase()]
+      });
+    }
+
+    await Product.insertMany(productsToInsert);
+    console.log('✅ Successfully seeded 1,000 products into MongoDB Atlas.');
+  } catch (error) {
+    console.error('❌ Seeding error:', error);
+  }
+};
+
 // --- API Routes ---
 
-/* Simple health check endpoint */
-// Fix: Changed req/res types to any to resolve 'json' property error on Response type
 app.get('/api/health', (req: any, res: any) => {
   res.json({ 
     status: 'active', 
@@ -75,8 +122,6 @@ app.get('/api/health', (req: any, res: any) => {
   });
 });
 
-/* Authentication endpoint */
-// Fix: Changed req/res types to any to resolve 'body', 'json', and 'status' property errors on Request/Response types
 app.post('/api/auth/login', async (req: any, res: any) => {
   const { email } = req.body;
   try {
@@ -98,8 +143,6 @@ app.post('/api/auth/login', async (req: any, res: any) => {
   }
 });
 
-/* Product catalog endpoint */
-// Fix: Changed req/res types to any to resolve 'query', 'json', and 'status' property errors on Request/Response types
 app.get('/api/products', async (req: any, res: any) => {
   try {
     const { category, search } = req.query;
@@ -118,8 +161,6 @@ app.get('/api/products', async (req: any, res: any) => {
   }
 });
 
-/* Order placement endpoint */
-// Fix: Changed req/res types to any to resolve 'body', 'status', and 'json' property errors on Request/Response types
 app.post('/api/orders', async (req: any, res: any) => {
   try {
     const orderData = {
@@ -135,8 +176,6 @@ app.post('/api/orders', async (req: any, res: any) => {
   }
 });
 
-/* User specific orders endpoint */
-// Fix: Changed req/res types to any to resolve 'params', 'json', and 'status' property errors on Request/Response types
 app.get('/api/orders/user/:userId', async (req: any, res: any) => {
   try {
     const orders = await Order.find({ userId: req.params.userId }).sort({ date: -1 });
@@ -146,8 +185,6 @@ app.get('/api/orders/user/:userId', async (req: any, res: any) => {
   }
 });
 
-/* Order status management endpoint */
-// Fix: Changed req/res types to any to resolve 'body', 'params', 'json', and 'status' property errors on Request/Response types
 app.patch('/api/orders/:id/status', async (req: any, res: any) => {
   try {
     const { status } = req.body;
@@ -165,17 +202,12 @@ const MONGODB_URI = (process.env as any).MONGODB_URI;
 if (!MONGODB_URI) {
   console.error('CRITICAL: MONGODB_URI is missing from environment variables.');
 } else {
-  // Security: Mask password for logging
-  const maskedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@');
-  console.log(`Connecting to: ${maskedUri}`);
-
-  const options: ConnectOptions = {
-    dbName: 'novamart'
-  };
+  const options: ConnectOptions = { dbName: 'novamart' };
 
   mongoose.connect(MONGODB_URI, options)
-    .then(() => {
+    .then(async () => {
       console.log('✅ Connected to MongoDB Atlas Successfully');
+      await seedDatabase();
       app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
     })
     .catch(err => {
