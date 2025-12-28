@@ -4,19 +4,32 @@ import { MOCK_PRODUCTS, MOCK_REVIEWS } from '../constants';
 
 /**
  * DEPLOYMENT CONFIGURATION:
- * In production, the 'VITE_API_URL' should point to your Render backend.
+ * This logic ensures the frontend finds your Render backend automatically.
  */
-// Detect if we are in a browser environment that supports process.env or import.meta.env
 const getBaseUrl = () => {
-  const envUrl = (import.meta as any).env?.VITE_API_URL || (window as any)._env_?.VITE_API_URL;
-  if (envUrl) return envUrl;
+  // Priority: 1. Environment Variable, 2. Current Host (if local), 3. Hardcoded Fallback
+  let envUrl = (import.meta as any).env?.VITE_API_URL || 
+               (process as any).env?.VITE_API_URL || 
+               (window as any)._env_?.VITE_API_URL;
+
+  if (envUrl) {
+    // Clean up trailing slashes
+    envUrl = envUrl.replace(/\/$/, "");
+    
+    // Automatically append /api if missing
+    if (!envUrl.endsWith('/api')) {
+      envUrl = `${envUrl}/api`;
+    }
+    return envUrl;
+  }
   
-  // Fallback for local development
+  // Local development fallback
   return 'http://localhost:5000/api';
 };
 
 const API_BASE_URL = getBaseUrl();
-const USE_REAL_BACKEND = API_BASE_URL.includes('http'); 
+// Helper to check if we are connected to a real live backend
+const IS_LIVE_BACKEND = API_BASE_URL.includes('onrender.com');
 
 class MockDatabase {
   private products: Product[] = [];
@@ -137,7 +150,7 @@ const db = new MockDatabase();
 export const apiService = {
   config: {
     baseUrl: API_BASE_URL,
-    isMock: !USE_REAL_BACKEND
+    isLive: IS_LIVE_BACKEND
   },
   products: {
     getAll: async (q?: string, cat?: string): Promise<Product[]> => {
@@ -149,7 +162,7 @@ export const apiService = {
         if (!res.ok) throw new Error('Backend responded with error');
         return res.json();
       } catch (err) {
-        console.warn("Backend unreachable, using local database.", err);
+        console.warn("Backend connection failed. Using local storage mode.", err);
         return db.getProducts(q, cat);
       }
     },
